@@ -96,7 +96,25 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  process.env.FRONTEND_GDOMAIN,
+  process.env.FRONTEND_GLOBE_DOMAIN,
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS Not Allowed"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json()); // JSON data accept cheyadaniki
 
 // 🛑 3. Kotha API Routes ni Express ki isthunnam
@@ -109,9 +127,10 @@ app.use('/api/courses', courseRoutes);
 
 // Google Drive API setup (Service Account credentials)
 const auth = new google.auth.GoogleAuth({
-    keyFile: './google-credentials.json', // Mana API key file ikkade undali
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  credentials: JSON.parse(process.env.GOOGLE_SERVICE_JSON),
+  scopes: ["https://www.googleapis.com/auth/drive.readonly"],
 });
+
 const drive = google.drive({ version: 'v3', auth });
 
 // Smart Streaming API route (Supports Seek/Forward/Backward)

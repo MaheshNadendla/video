@@ -3,7 +3,8 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom'; // 👈 URL nunchi params theskodaniki
 import { useAuth } from '../context/AuthContext';
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
+const backendUrl = import.meta.env.VITE_MODE==="development" 
+? import.meta.env.VITE_BACKEND_URL : import.meta.env.VITE_GLOBE_BACKEND_URL;
 
 export default function CoursePlayer() {
   // 1. URL nunchi courseId, lessonId rendu theskuntunnam

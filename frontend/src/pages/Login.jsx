@@ -83,7 +83,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; 
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+const backendUrl = import.meta.env.VITE_MODE==="development" 
+? import.meta.env.VITE_BACKEND_URL : import.meta.env.VITE_GLOBE_BACKEND_URL;
 
 export default function Login() {
   const navigate = useNavigate();

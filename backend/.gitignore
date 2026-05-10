@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 .env
 google-credentials.json
+text.md
 /node_modules
