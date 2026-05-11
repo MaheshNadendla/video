@@ -148,7 +148,11 @@ app.get('/api/stream/:fileId',protect, async (req, res) => {
             // 2. User seek chesinappudu (Browser asking for specific parts)
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            
+            // 🛑 INCREASED CHUNK SIZE: Serving 5MB chunks to the browser
+            const CHUNK_SIZE = 5 * 1024 * 1024; 
+            const end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + CHUNK_SIZE, fileSize - 1);
+            
             const chunksize = (end - start) + 1;
 
             // Browser ki idhi sagam video ae ani cheppadaniki (Status 206)

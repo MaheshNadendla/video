@@ -136,8 +136,8 @@ export default function CoursePlayer() {
 
   // 3. Main Sync & Progress Update Logic
   const handleTimeUpdate = () => {
-    // Tightened tolerance for better sync
-    if (audioRef.current && Math.abs(videoRef.current.currentTime - audioRef.current.currentTime) > 0.15) {
+    // Increased tolerance (1.5s) to prevent frequent buffering every second
+    if (audioRef.current && Math.abs(videoRef.current.currentTime - audioRef.current.currentTime) > 1.5) {
       audioRef.current.currentTime = videoRef.current.currentTime;
     }
     setProgress(videoRef.current.currentTime);
@@ -248,6 +248,7 @@ export default function CoursePlayer() {
                   onSeeked={handleSeeked}
                   onClick={togglePlay}
                   poster={currentLesson.thumbnailUrl || "https://via.placeholder.com/1280x720/0f172a/3b82f6?text=Loading+Video..."}
+                  preload="auto"
                 >
                   <source src={`${backendUrl}/api/stream/${currentLesson.videoDriveId}?token=${token}`} type="video/mp4" />
                 </video>
@@ -258,6 +259,7 @@ export default function CoursePlayer() {
                   onWaiting={handleWaiting}
                   onPlaying={handleCanPlay}
                   onCanPlay={handleCanPlay}
+                  preload="auto"
                 >
                   <source src={`${backendUrl}/api/stream/${currentLesson.audioDriveId}?token=${token}`} type="audio/mp3" />
                 </audio>
