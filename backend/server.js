@@ -139,9 +139,10 @@ app.get('/api/stream/:fileId',protect, async (req, res) => {
         const fileId = req.params.fileId;
         const range = req.headers.range;
 
-        // 1. First, Google Drive nunchi video total size entho kanukkuntundi
-        const fileMeta = await drive.files.get({ fileId: fileId, fields: 'size' });
+        // 1. First, Google Drive nunchi video total size mariyu mimeType kanukkuntundi
+        const fileMeta = await drive.files.get({ fileId: fileId, fields: 'size, mimeType' });
         const fileSize = parseInt(fileMeta.data.size, 10);
+        const mimeType = fileMeta.data.mimeType || 'video/mp4';
 
         if (range) {
             // 2. User seek chesinappudu (Browser asking for specific parts)
@@ -155,7 +156,7 @@ app.get('/api/stream/:fileId',protect, async (req, res) => {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
                 'Content-Length': chunksize,
-                'Content-Type': 'video/mp4',
+                'Content-Type': mimeType,
             });
 
             // Drive nunchi aa specific part matrame thecchi isthundi
@@ -169,7 +170,7 @@ app.get('/api/stream/:fileId',protect, async (req, res) => {
             // 3. Normal ga first nunchi play ayyeti tappudu (Status 200)
             res.writeHead(200, {
                 'Content-Length': fileSize,
-                'Content-Type': 'video/mp4',
+                'Content-Type': mimeType,
             });
 
             const response = await drive.files.get(

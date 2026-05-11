@@ -20,6 +20,7 @@ export default function CoursePlayer() {
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -119,7 +120,7 @@ export default function CoursePlayer() {
     if (isLocked) return;
     const newTime = Math.min(Math.max(videoRef.current.currentTime + seconds, 0), duration);
     videoRef.current.currentTime = newTime;
-    audioRef.current.currentTime = newTime;
+    if (audioRef.current) audioRef.current.currentTime = newTime;
     setProgress(newTime);
   };
 
@@ -135,10 +136,53 @@ export default function CoursePlayer() {
 
   // 3. Main Sync & Progress Update Logic
   const handleTimeUpdate = () => {
-    if (Math.abs(videoRef.current.currentTime - audioRef.current.currentTime) > 0.5) {
+    // Tightened tolerance for better sync
+    if (audioRef.current && Math.abs(videoRef.current.currentTime - audioRef.current.currentTime) > 0.15) {
       audioRef.current.currentTime = videoRef.current.currentTime;
     }
     setProgress(videoRef.current.currentTime);
+  };
+
+  const checkSyncAndPlay = () => {
+    if (!videoRef.current || !audioRef.current) return;
+    
+    // Check if both elements have enough data to play (readyState >= 3)
+    const videoReady = videoRef.current.readyState >= 3;
+    const audioReady = audioRef.current.readyState >= 3;
+
+    if (videoReady && audioReady) {
+      setIsBuffering(false);
+      if (isPlaying) {
+        videoRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => {});
+      }
+    } else {
+      setIsBuffering(true);
+      videoRef.current.pause();
+      audioRef.current.pause();
+    }
+  };
+
+  const handleWaiting = () => {
+    setIsBuffering(true);
+    if (videoRef.current) videoRef.current.pause();
+    if (audioRef.current) audioRef.current.pause();
+  };
+
+  const handleCanPlay = () => {
+    checkSyncAndPlay();
+  };
+
+  const handleSeeked = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = videoRef.current.currentTime;
+    }
+    checkSyncAndPlay();
+  };
+
+  const handleSeeking = () => {
+    setIsBuffering(true);
+    if (audioRef.current) audioRef.current.pause();
   };
 
   const handleLoadedMetadata = () => {
@@ -150,7 +194,7 @@ export default function CoursePlayer() {
     if (isLocked) return;
     const time = parseFloat(e.target.value);
     videoRef.current.currentTime = time;
-    audioRef.current.currentTime = time;
+    if (audioRef.current) audioRef.current.currentTime = time;
     setProgress(time);
   };
 
@@ -197,15 +241,36 @@ export default function CoursePlayer() {
                   className="w-full h-full object-contain"
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
+                  onWaiting={handleWaiting}
+                  onPlaying={handleCanPlay}
+                  onCanPlay={handleCanPlay}
+                  onSeeking={handleSeeking}
+                  onSeeked={handleSeeked}
                   onClick={togglePlay}
                   poster={currentLesson.thumbnailUrl || "https://via.placeholder.com/1280x720/0f172a/3b82f6?text=Loading+Video..."}
                 >
                   <source src={`${backendUrl}/api/stream/${currentLesson.videoDriveId}?token=${token}`} type="video/mp4" />
                 </video>
 
-                <audio ref={audioRef} key={currentLesson.audioDriveId}>
+                <audio 
+                  ref={audioRef} 
+                  key={currentLesson.audioDriveId}
+                  onWaiting={handleWaiting}
+                  onPlaying={handleCanPlay}
+                  onCanPlay={handleCanPlay}
+                >
                   <source src={`${backendUrl}/api/stream/${currentLesson.audioDriveId}?token=${token}`} type="audio/mp3" />
                 </audio>
+
+                {/* 🌀 BUFFERING INDICATOR */}
+                {isBuffering && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-40">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-white font-bold text-sm bg-black/40 px-3 py-1 rounded-full">Buffering...</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* 🔒 LOCK BUTTON */}
                 <button 
