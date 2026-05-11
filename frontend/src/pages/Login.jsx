@@ -126,13 +126,13 @@ export default function Login() {
       <div className="relative w-full max-w-[90%] sm:max-w-md bg-white/[0.02] border border-white/[0.05] backdrop-blur-2xl p-8 sm:p-12 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl text-center z-10">
         
         {/* 4. Animated Premium Icon */}
-        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-blue-600/20 to-cyan-400/10 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-8 border border-white/10 shadow-[0_0_30px_rgba(59,130,246,0.15)] hover:scale-105 transition-transform duration-500">
-          <span className="text-4xl sm:text-5xl drop-shadow-lg">🎓</span>
+        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-blue-600/20 to-cyan-400/10 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-8 border border-white/10 shadow-[0_0_30px_rgba(59,130,246,0.15)] overflow-hidden hover:scale-105 transition-transform duration-500">
+          <img src="/logo.png" alt="Nexus Stream Logo" className="w-full h-full object-cover" />
         </div>
         
         {/* 5. Typography - Gradient Text */}
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-3">
-          Coders LMS
+          Nexus Stream
         </h1>
         <p className="text-slate-400 mb-10 text-sm sm:text-base font-medium">
           Premium Full Stack Masterclass

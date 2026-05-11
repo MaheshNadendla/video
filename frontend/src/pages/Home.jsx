@@ -7,11 +7,11 @@ export default function Home() {
     <div className="min-h-screen bg-slate-950 text-white selection:bg-blue-500/30">
       {/* 1. Navbar */}
       <nav className="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 group cursor-pointer">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-xl shadow-[0_0_15px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-transform">
-            M
+        <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate('/')}>
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-xl shadow-[0_0_15px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-transform overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Mahesh<span className="text-blue-500">LMS</span></span>
+          <span className="text-xl font-bold tracking-tight">Nexus <span className="text-blue-500">Stream</span></span>
         </div>
         <button 
           onClick={() => navigate('/login')}
@@ -70,7 +70,7 @@ export default function Home() {
 
       {/* 4. Footer */}
       <footer className="border-t border-slate-900 py-12 text-center text-slate-600 text-sm">
-        © 2026 Mahesh LMS. Developed with ❤️ for Developers.
+        © 2026 Nexus Stream. Developed with ❤️ for Developers.
       </footer>
     </div>
   );

@@ -17,10 +17,14 @@ export default function CoursePlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [showControls, setShowControls] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const containerRef = useRef(null);
+  const controlsTimeoutRef = useRef(null);
 
   // 2. Fetch Lessons & Set Current Lesson
   useEffect(() => {
@@ -71,8 +75,35 @@ export default function CoursePlayer() {
     }
   }, [lessonId, lessons]); // 👈 Runs when user clicks a different lesson
 
+  // 4. Auto-hide controls logic
+  useEffect(() => {
+    const handleActivity = () => {
+      if (isLocked) return;
+      setShowControls(true);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = setTimeout(() => {
+        if (isPlaying) setShowControls(false);
+      }, 3000);
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('mousemove', handleActivity);
+      container.addEventListener('touchstart', handleActivity);
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener('mousemove', handleActivity);
+        container.removeEventListener('touchstart', handleActivity);
+      }
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, [isPlaying, isLocked]);
+
   // 2. Play/Pause Sync
   const togglePlay = () => {
+    if (isLocked) return;
     if (isPlaying) {
       videoRef.current.pause();
       audioRef.current.pause();
@@ -81,6 +112,25 @@ export default function CoursePlayer() {
       audioRef.current.play();
     }
     setIsPlaying(!isPlaying);
+    setShowControls(true);
+  };
+
+  const handleSkip = (seconds) => {
+    if (isLocked) return;
+    const newTime = Math.min(Math.max(videoRef.current.currentTime + seconds, 0), duration);
+    videoRef.current.currentTime = newTime;
+    audioRef.current.currentTime = newTime;
+    setProgress(newTime);
+  };
+
+  const toggleLock = (e) => {
+    e.stopPropagation();
+    setIsLocked(!isLocked);
+    if (!isLocked) {
+      setShowControls(false); // Hide controls immediately when locking
+    } else {
+      setShowControls(true); // Show controls when unlocking
+    }
   };
 
   // 3. Main Sync & Progress Update Logic
@@ -91,8 +141,13 @@ export default function CoursePlayer() {
     setProgress(videoRef.current.currentTime);
   };
 
+  const handleLoadedMetadata = () => {
+    setDuration(videoRef.current.duration);
+  };
+
   // 4. Seek Bar Logic
   const handleSeek = (e) => {
+    if (isLocked) return;
     const time = parseFloat(e.target.value);
     videoRef.current.currentTime = time;
     audioRef.current.currentTime = time;
@@ -141,6 +196,7 @@ export default function CoursePlayer() {
                   key={currentLesson.videoDriveId}
                   className="w-full h-full object-contain"
                   onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
                   onClick={togglePlay}
                   poster={currentLesson.thumbnailUrl || "https://via.placeholder.com/1280x720/0f172a/3b82f6?text=Loading+Video..."}
                 >
@@ -151,31 +207,93 @@ export default function CoursePlayer() {
                   <source src={`${backendUrl}/api/stream/${currentLesson.audioDriveId}?token=${token}`} type="audio/mp3" />
                 </audio>
 
-                {/* 🆕 CUSTOM TIMELINE OVERLAY */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <input 
-                    type="range"
-                    min="0"
-                    max={videoRef.current?.duration || 0}
-                    value={progress}
-                    onChange={handleSeek}
-                    className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-blue-500 mb-2"
-                  />
-                  <div className="flex justify-between text-xs text-slate-300 font-mono">
-                    <div className="flex items-center gap-3">
-                      <span>{formatTime(videoRef.current?.currentTime)} / {formatTime(videoRef.current?.duration)}</span>
-                    </div>
-                   
-                    {/* 🔳 THE FULL SCREEN BUTTON */}
+                {/* 🔒 LOCK BUTTON */}
+                <button 
+                  onClick={toggleLock}
+                  className={`absolute top-4 left-4 z-50 p-3 rounded-full transition-all duration-300 ${
+                    showControls || isLocked ? 'opacity-100' : 'opacity-0'
+                  } ${isLocked ? 'bg-red-500 text-white' : 'bg-black/40 text-white hover:bg-black/60'}`}
+                >
+                  {isLocked ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                  )}
+                </button>
+
+                {/* 🆕 PROFESSIONAL OVERLAY */}
+                <div className={`absolute inset-0 flex flex-col justify-between bg-black/40 transition-opacity duration-300 ${
+                  showControls && !isLocked ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}>
+                  
+                  {/* CENTRAL CONTROLS */}
+                  <div className="flex-1 flex items-center justify-center gap-12 sm:gap-20">
                     <button 
-                      onClick={toggleFullScreen} 
-                      className="p-1.5 hover:bg-white/20 rounded-md transition-colors"
-                      title="Toggle Fullscreen"
+                      onClick={(e) => { e.stopPropagation(); handleSkip(-30); }}
+                      className="p-4 rounded-full bg-white/10 hover:bg-white/20 transition-all active:scale-90 group"
+                      title="Rewind 30s"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
                       </svg>
+                      <span className="absolute mt-12 text-xs font-bold text-white opacity-0 group-hover:opacity-100">-30s</span>
                     </button>
+
+                    <button 
+                      onClick={togglePlay}
+                      className="p-6 rounded-full bg-blue-600 hover:bg-blue-500 transition-all active:scale-95 shadow-lg shadow-blue-600/30"
+                    >
+                      {isPlaying ? (
+                        <svg className="w-10 h-10 sm:w-14 sm:h-14 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-10 h-10 sm:w-14 sm:h-14 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      )}
+                    </button>
+
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleSkip(30); }}
+                      className="p-4 rounded-full bg-white/10 hover:bg-white/20 transition-all active:scale-90 group"
+                      title="Forward 30s"
+                    >
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+                      </svg>
+                      <span className="absolute mt-12 text-xs font-bold text-white opacity-0 group-hover:opacity-100">+30s</span>
+                    </button>
+                  </div>
+
+                  {/* BOTTOM TIMELINE OVERLAY */}
+                  <div className="p-4 sm:p-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+                    <input 
+                      type="range"
+                      min="0"
+                      max={duration || 0}
+                      value={progress}
+                      onChange={handleSeek}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-blue-500 mb-3 hover:h-2 transition-all"
+                    />
+                    <div className="flex justify-between items-center text-sm text-slate-200 font-mono">
+                      <div className="flex items-center gap-4">
+                        <span className="bg-black/40 px-2 py-1 rounded">{formatTime(videoRef.current?.currentTime)} / {formatTime(duration)}</span>
+                      </div>
+                    
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={toggleFullScreen} 
+                          className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                          title="Toggle Fullscreen"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>
@@ -193,14 +311,27 @@ export default function CoursePlayer() {
               <p className="text-sm text-slate-400">Lesson {currentLesson?.sNo || "-"}</p>
             </div>
             <div className="flex items-center gap-4">
-              <button onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)} className="p-3 bg-slate-700 rounded-xl hover:bg-slate-600 text-white">⏪ 10s</button>
+              <button 
+                onClick={() => handleSkip(-30)} 
+                className={`p-3 bg-slate-700 rounded-xl hover:bg-slate-600 text-white transition-all ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isLocked}
+              >
+                ⏪ 30s
+              </button>
               <button 
                 onClick={togglePlay} 
-                className="bg-blue-600 px-10 py-3 rounded-2xl font-black text-white hover:bg-blue-500 transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] active:scale-95"
+                className={`bg-blue-600 px-10 py-3 rounded-2xl font-black text-white hover:bg-blue-500 transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] active:scale-95 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isLocked}
               >
                 {isPlaying ? "PAUSE ||" : "PLAY ▶"}
               </button>
-              <button onClick={() => videoRef.current && (videoRef.current.currentTime += 10)} className="p-3 bg-slate-700 rounded-xl hover:bg-slate-600 text-white">10s ⏩</button>
+              <button 
+                onClick={() => handleSkip(30)} 
+                className={`p-3 bg-slate-700 rounded-xl hover:bg-slate-600 text-white transition-all ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isLocked}
+              >
+                30s ⏩
+              </button>
             </div>
           </div>
         </div>
